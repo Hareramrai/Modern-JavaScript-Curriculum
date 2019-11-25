@@ -1,13 +1,15 @@
-var axios = require("axios");
+import axios from "axios";
 
 var id = "YOUR_CLIENT_ID";
 var sec = "YOUR_SECRET_ID";
 var params = `?client_id=${id}&client_secret=${sec}`;
 
-function getProfile(username) {
-  return axios
+async function getProfile(username) {
+  const profile = await axios
     .get(`https://api.github.com/users/${username}${params}`)
-    .then(({ data }) => data);
+    .catch(handleError);
+
+  return profile.data;
 }
 
 function getRepos(username) {
@@ -32,32 +34,35 @@ function handleError(error) {
   return null;
 }
 
-function getUserData(player) {
-  return axios
-    .all([getProfile(player), getRepos(player)])
-    .then(([profile, repos]) => ({
-      profile: profile,
-      score: calculateScore(profile, repos)
-    }));
+async function getUserData(player) {
+  const [profile, repos] = await Promise.all([
+    getProfile(player),
+    getRepos(player)
+  ]);
+
+  return {
+    profile,
+    score: calculateScore(profile, repos)
+  };
 }
 
 function sortPlayers(players) {
   return players.sort((a, b) => b.score - a.score);
 }
 
-module.exports = {
-  battle: function(players) {
-    return axios
-      .all(players.map(getUserData))
-      .then(sortPlayers)
-      .catch(handleError);
-  },
-  fetchPopularRepos: function(language) {
-    var encodedURI = window.encodeURI(
-      `https://api.github.com/search/repositories?q=stars:>1+language:
-        ${language}&sort=stars&order=desc&type=Repositories`
-    );
+export async function battle(players) {
+  const results = await Promise.all(players.map(getUserData)).catch(
+    handleError
+  );
 
-    return axios.get(encodedURI).then(({ data: { items } }) => items);
-  }
-};
+  return results === null ? results : sortPlayers(results);
+}
+export async function fetchPopularRepos(language) {
+  var encodedURI = window.encodeURI(
+    `https://api.github.com/search/repositories?q=stars:>1+language:
+        ${language}&sort=stars&order=desc&type=Repositories`
+  );
+
+  const repos = await axios.get(encodedURI).catch(handleError);
+  return repos.data.items;
+}

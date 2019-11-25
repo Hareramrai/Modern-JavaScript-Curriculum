@@ -1,10 +1,10 @@
-var React = require("react");
-var PropTypes = require("prop-types");
-var queryString = require("query-string");
-var api = require("../utils/api");
-var Link = require("react-router-dom").Link;
-var PlayerPreview = require("./PlayerPreview");
-var Loading = require("./Loading");
+import React from "react";
+import PropTypes from "prop-types";
+import queryString from "query-string";
+import { battle } from "../utils/api";
+import { Link } from "react-router-dom";
+import PlayerPreview from "./PlayerPreview";
+import Loading from "./Loading";
 
 function Profile(props) {
   var {
@@ -59,35 +59,36 @@ Player.propTypes = {
 };
 
 class Results extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      winner: null,
-      loser: null,
-      error: null,
-      loading: true
-    };
-  }
-  componentDidMount() {
-    var players = queryString.parse(this.props.location.search);
+  state = {
+    winner: null,
+    loser: null,
+    error: null,
+    loading: true
+  };
 
-    api.battle([players.playerOneName, players.playerTwoName]).then(players => {
-      if (players === null) {
-        return this.setState(() => ({
-          error:
-            "Looks like there was an error. Check that both users exist on Github.",
-          loading: false
-        }));
-      }
+  async componentDidMount() {
+    const { playerOneName, playerTwoName } = queryString.parse(
+      this.props.location.search
+    );
 
-      this.setState(() => ({
-        error: null,
-        winner: players[0],
-        loser: players[1],
+    const players = await battle([playerOneName, playerTwoName]);
+
+    if (players === null) {
+      return this.setState(() => ({
+        error:
+          "Looks like there was an error. Check that both users exist on Github.",
         loading: false
       }));
-    });
+    }
+
+    this.setState(() => ({
+      error: null,
+      winner: players[0],
+      loser: players[1],
+      loading: false
+    }));
   }
+
   render() {
     var { error, winner, loser, loading } = this.state;
 
@@ -113,4 +114,4 @@ class Results extends React.Component {
   }
 }
 
-module.exports = Results;
+export default Results;
